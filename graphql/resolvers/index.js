@@ -4,18 +4,21 @@ const Event = require('../../models/event');
 
 const User = require('../../models/user');
 
-const user = userId =>{
-    return User.findById(userId)
-    .then(user => {
+const user = async userId =>{
+
+    try{
+
+    const user = await User.findById(userId)
+    
         return { 
             ...user._doc, 
             _id:user.id,
             createdEvents: events.bind(this, user._doc.createdEvents)
         };
-    })
-    .catch(err => {
+    
+    } catch(err) {
         throw err;
-    })
+    }
 }
 
 const events = async eventIds => {
@@ -36,9 +39,10 @@ const events = async eventIds => {
 }
 
 module.exports = {
-    events: () => {
-        return Event.find()
-        .then(events => {
+    events: async () => {
+        try{
+        const events = await Event.find()
+        
             return events.map(event => {
                 return { 
                     ...event._doc, 
@@ -47,70 +51,69 @@ module.exports = {
                     creator: user.bind(this, event._doc.creator)
                 }; 
             })
-        })
-        .catch( err => {
+        
+        }catch( err) {
             throw err;
-        });
+        }
     },
-    createEvent: (args) => {
+    createEvent: async args => {
        
         const event = new Event({
             title: args.eventInput.title,
             description: args.eventInput.description,
             price: +args.eventInput.price,
             date: new Date(args.eventInput.date),
-            creator: '5cd4d8a5bd0f05158083ecea'
+            creator: '5ce026ca7909a83f646f39c2'
         });
         let createdEvent;
-        return event
+        try{
+        const result = await event
             .save()
-            .then(result =>{
+            
                 createdEvent = {
                     ...result._doc, 
                     _id: result._doc._id.toString(),
                     date: new Date(event._doc.date).toISOString(),
                     creator: user.bind(this, result._doc.creator)
                  }; //leave out the metadata, just the core properties
-                return User.findById('5cd4d8a5bd0f05158083ecea')
-            })
-            .then(user => {
-                if(!user){
+                const creator = await User.findById('5ce026ca7909a83f646f39c2')
+            
+                if(!creator){
                     throw new Error('User not found.')
                 }
-                user.createdEvents.push(event);
-                return user.save();
-            })
-            .then(result => {
+                creator.createdEvents.push(event);
+                await creator.save();
+            
+            
                 return createdEvent; 
-            })
-            .catch(err => {
+            } catch(err) {
                 console.log(err);
                 throw err;
-            });
+            }
          
     },
     
-    createUser: (args) => {
-        return User.findOne({ email: args.userInput.email })
-        .then(user =>{
-            if(user){
+    createUser: async args => {
+        try{
+        const existingUser = await User.findOne({ email: args.userInput.email })
+        
+            if(existingUser){
                 throw new Error("User already exists.")
             }
-            return bcrypt.hash(args.userInput.password, 12);
-        })
-        .then(hashedPassword => {
+            const hashedPassword = await bcrypt.hash(args.userInput.password, 12);
+        
+        
                 const user = new User({
                     email: args.userInput.email,
                     password: hashedPassword
                 });
-                return user.save();
-            })
-            .then(result => {
-                return {...result._doc, password:null, _id: result.id}
-            })
-            .catch(err => {
-                throw(err)
-            });
+                const result = await user.save();
+
+                return {...result._doc, password:null, _id: result.id};
+
+            } catch(err) {
+                throw(err);
+            }
         
     }
 }
